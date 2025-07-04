@@ -101,8 +101,9 @@ const permissions = {
 - Temporary password assignment with forced change
 
 #### StudentRegisterForm Component (Admin Use)
-- **System Admins** can register students from admin dashboard
+- **Registrar Admins** can register students for their assigned college only
 - Complete student profile collection
+- College restriction based on registrar's assignment
 - Student ID and email validation
 - Automatic password generation with forced change
 - Optional email notification to student
@@ -166,7 +167,7 @@ POST /api/auth/student/login    - Student login
 ```
 POST /api/auth/admin/login            - Admin login
 POST /api/auth/admin/register         - Admin registration (protected)
-POST /api/auth/admin/register-student - Student registration by admin (system admin only)
+POST /api/auth/admin/register-student - Student registration by admin (registrar admin only)
 ```
 
 ### Legacy Endpoints (Backward Compatibility)

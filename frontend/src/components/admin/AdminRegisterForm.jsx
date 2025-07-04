@@ -169,6 +169,29 @@ const AdminRegisterForm = ({ onClose, onSuccess }) => {
           </div>
         )}
 
+        {watchRole === 'registrar_admin' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Assigned College
+            </label>
+            <select
+              {...register('college', { required: 'College is required for registrar admins' })}
+              className="input-field mt-1"
+            >
+              <option value="">Select college</option>
+              <option value="engineering">College of Engineering</option>
+              <option value="natural_science">College of Natural and Applied Science</option>
+              <option value="social_science">College of Social Science and Humanities</option>
+            </select>
+            {errors.college && (
+              <p className="mt-1 text-sm text-red-600">{errors.college.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              This registrar will only be able to register students for this college.
+            </p>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Initial Password

@@ -114,47 +114,52 @@ const UserManagement = () => {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Current User Info */}
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">Your Privileges</h4>
-              <p className="text-blue-700 text-sm">
-                <strong>Role:</strong> {getRoleDisplayName(user?.role)}
-              </p>
-              {hasPermission('register_admins') && (
-                <p className="text-blue-700 text-sm mt-1">
-                  ✓ Can register all admin types and students
-                </p>
-              )}
-              {hasPermission('register_registrar_and_department_heads') && (
-                <p className="text-blue-700 text-sm mt-1">
-                  ✓ Can register department heads and registrar admins
-                </p>
-              )}
-              {hasPermission('register_students') && (
-                <p className="text-blue-700 text-sm mt-1">
-                  ✓ Can register students
-                </p>
-              )}
-            </div>
+                         <div className="p-4 bg-blue-50 rounded-lg">
+               <h4 className="font-medium text-blue-900 mb-2">Your Privileges</h4>
+               <p className="text-blue-700 text-sm">
+                 <strong>Role:</strong> {getRoleDisplayName(user?.role)}
+               </p>
+               {user?.college && (
+                 <p className="text-blue-700 text-sm mt-1">
+                   <strong>Assigned College:</strong> {user.college.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                 </p>
+               )}
+               {hasPermission('register_admins') && (
+                 <p className="text-blue-700 text-sm mt-1">
+                   ✓ Can register all admin types
+                 </p>
+               )}
+               {hasPermission('register_registrar_and_department_heads') && (
+                 <p className="text-blue-700 text-sm mt-1">
+                   ✓ Can register department heads and registrar admins
+                 </p>
+               )}
+               {hasPermission('register_students') && (
+                 <p className="text-blue-700 text-sm mt-1">
+                   ✓ Can register students for {user?.college ? user.college.replace('_', ' ') : 'assigned'} college
+                 </p>
+               )}
+             </div>
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {canRegisterStudents && (
-                <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
-                  <div className="flex items-center mb-3">
-                    <GraduationCap className="h-5 w-5 text-blue-600 mr-2" />
-                    <h5 className="font-medium text-blue-900">Student Registration</h5>
-                  </div>
-                  <p className="text-sm text-blue-700 mb-3">
-                    Create student accounts with complete academic information
-                  </p>
-                  <button
-                    onClick={() => setShowStudentRegisterForm(true)}
-                    className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                  >
-                    Register Student
-                  </button>
-                </div>
-              )}
+                             {canRegisterStudents && (
+                 <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                   <div className="flex items-center mb-3">
+                     <GraduationCap className="h-5 w-5 text-blue-600 mr-2" />
+                     <h5 className="font-medium text-blue-900">Student Registration</h5>
+                   </div>
+                   <p className="text-sm text-blue-700 mb-3">
+                     Create student accounts for {user?.college ? user.college.replace('_', ' ') : 'your assigned'} college
+                   </p>
+                   <button
+                     onClick={() => setShowStudentRegisterForm(true)}
+                     className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                   >
+                     Register Student
+                   </button>
+                 </div>
+               )}
 
               {canRegisterAdmins && (
                 <div className="p-4 border border-slate-200 rounded-lg bg-slate-50">
@@ -242,32 +247,49 @@ const UserManagement = () => {
               </button>
             </div>
 
-            {/* Student Registration Info */}
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <h5 className="font-medium text-blue-900 mb-2">Student Registration Guidelines</h5>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Complete academic information is required</li>
-                <li>• Student ID must be unique across the system</li>
-                <li>• Email addresses must be valid and unique</li>
-                <li>• Students will receive login credentials via email</li>
-                <li>• Students must change their password on first login</li>
-              </ul>
-            </div>
+                         {/* Student Registration Info */}
+             <div className="p-4 bg-blue-50 rounded-lg">
+               <h5 className="font-medium text-blue-900 mb-2">Student Registration Guidelines</h5>
+               <ul className="text-sm text-blue-700 space-y-1">
+                 <li>• You can only register students for your assigned college</li>
+                 <li>• Complete academic information is required</li>
+                 <li>• Student ID must be unique across the system</li>
+                 <li>• Email addresses must be valid and unique</li>
+                 <li>• Students will receive login credentials via email</li>
+                 <li>• Students must change their password on first login</li>
+               </ul>
+             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 border border-blue-200 rounded-lg">
-                <div className="font-medium text-blue-900">Engineering</div>
-                <div className="text-sm text-blue-700">9 departments available</div>
-              </div>
-              <div className="p-4 border border-green-200 rounded-lg">
-                <div className="font-medium text-green-900">Natural Science</div>
-                <div className="text-sm text-green-700">4 departments available</div>
-              </div>
-              <div className="p-4 border border-purple-200 rounded-lg">
-                <div className="font-medium text-purple-900">Social Science</div>
-                <div className="text-sm text-purple-700">2 programs available</div>
-              </div>
-            </div>
+                         {user?.college ? (
+               <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                 <div className="font-medium text-blue-900">Your Assigned College</div>
+                 <div className="text-lg font-semibold text-blue-800 mt-1">
+                   {user.college === 'engineering' && 'College of Engineering'}
+                   {user.college === 'natural_science' && 'College of Natural and Applied Science'}
+                   {user.college === 'social_science' && 'College of Social Science and Humanities'}
+                 </div>
+                 <div className="text-sm text-blue-700 mt-1">
+                   {user.college === 'engineering' && '9 departments available'}
+                   {user.college === 'natural_science' && '4 departments available'}
+                   {user.college === 'social_science' && '2 programs available'}
+                 </div>
+               </div>
+             ) : (
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div className="p-4 border border-blue-200 rounded-lg">
+                   <div className="font-medium text-blue-900">Engineering</div>
+                   <div className="text-sm text-blue-700">9 departments available</div>
+                 </div>
+                 <div className="p-4 border border-green-200 rounded-lg">
+                   <div className="font-medium text-green-900">Natural Science</div>
+                   <div className="text-sm text-green-700">4 departments available</div>
+                 </div>
+                 <div className="p-4 border border-purple-200 rounded-lg">
+                   <div className="font-medium text-purple-900">Social Science</div>
+                   <div className="text-sm text-purple-700">2 programs available</div>
+                 </div>
+               </div>
+             )}
           </div>
         )}
 

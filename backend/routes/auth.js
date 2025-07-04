@@ -265,6 +265,11 @@ router.post('/admin/register', authenticate, [
       userData.department = department;
     }
 
+    // Add college for registrar admins
+    if (role === 'registrar_admin' && req.body.college) {
+      userData.college = req.body.college;
+    }
+
     const user = new User(userData);
     await user.save();
 
@@ -284,7 +289,7 @@ router.post('/admin/register', authenticate, [
   }
 });
 
-// Admin Student Registration Route (only accessible by system admins)
+// Admin Student Registration Route (only accessible by registrar admins)
 router.post('/admin/register-student', authenticate, [
   body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
   body('email').isEmail().withMessage('Please provide a valid email'),
@@ -306,10 +311,17 @@ router.post('/admin/register-student', authenticate, [
     const { fullName, email, password, studentId, department, college, yearLevel, sendEmail } = req.body;
     const currentUser = req.user;
 
-    // Check permissions - only system admins can register students
-    if (currentUser.role !== 'system_admin') {
+    // Check permissions - only registrar admins can register students
+    if (currentUser.role !== 'registrar_admin') {
       return res.status(403).json({ 
-        message: 'Only system administrators can register students' 
+        message: 'Only registrar administrators can register students' 
+      });
+    }
+
+    // Check if registrar admin's college matches the student's college
+    if (currentUser.college && currentUser.college !== college) {
+      return res.status(403).json({ 
+        message: `You can only register students for ${currentUser.college} college` 
       });
     }
 

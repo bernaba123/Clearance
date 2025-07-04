@@ -3,7 +3,7 @@
 ## 🎯 New Feature Summary
 
 ### **Added Capability**
-**System Admins can now register students directly from their admin dashboard**, providing complete control over user creation in the system.
+**Registrar Admins can now register students for their assigned college directly from their admin dashboard**, providing college-specific control over student registration.
 
 ## 🆕 What's New
 
@@ -29,9 +29,9 @@
 
 ### **Backend API Endpoint**
 - **Endpoint**: `POST /api/auth/admin/register-student`
-- **Access**: System Admin only
-- **Validation**: Complete student data validation
-- **Security**: Role verification and permission checks
+- **Access**: Registrar Admin only
+- **Validation**: Complete student data validation + college restriction
+- **Security**: Role verification, permission checks, and college assignment validation
 
 ## 🔐 Permission System
 
@@ -39,15 +39,15 @@
 ```javascript
 const permissions = {
   'register_admins': ['system_admin'],
-  'register_students': ['system_admin'], // NEW PERMISSION
+  'register_students': ['registrar_admin'], // UPDATED PERMISSION
   'register_registrar_and_department_heads': ['registrar_admin'],
   // ... other permissions
 };
 ```
 
 ### **Access Control**
-- **System Admins**: ✅ Can register both admins and students
-- **Registrar Admins**: ✅ Can register admins (limited), ❌ Cannot register students
+- **System Admins**: ✅ Can register all admin types, ❌ Cannot register students
+- **Registrar Admins**: ✅ Can register admins (limited), ✅ Can register students (for assigned college only)
 - **Other Admins**: ❌ Cannot register any users
 
 ## 🎨 User Interface
@@ -87,10 +87,17 @@ const adminRegisterStudent = async (userData) => {
 
 ### **Backend Security**
 ```javascript
-// auth.js - Permission check
-if (currentUser.role !== 'system_admin') {
+// auth.js - Permission and college check
+if (currentUser.role !== 'registrar_admin') {
   return res.status(403).json({ 
-    message: 'Only system administrators can register students' 
+    message: 'Only registrar administrators can register students' 
+  });
+}
+
+// Check if registrar admin's college matches the student's college
+if (currentUser.college && currentUser.college !== college) {
+  return res.status(403).json({ 
+    message: `You can only register students for ${currentUser.college} college` 
   });
 }
 ```
@@ -98,9 +105,9 @@ if (currentUser.role !== 'system_admin') {
 ## 📋 Student Registration Process
 
 ### **Admin Workflow**
-1. **Access**: Login as System Admin → Navigate to Admin Dashboard
-2. **Registration**: Click "Register Student" → Fill complete form
-3. **Validation**: System validates all required fields
+1. **Access**: Login as Registrar Admin → Navigate to Admin Dashboard
+2. **Registration**: Click "Register Student" → Fill complete form (college pre-selected)
+3. **Validation**: System validates all required fields + college restriction
 4. **Creation**: Student account created with temporary credentials
 5. **Notification**: Optional email sent to student (future feature)
 
@@ -132,7 +139,7 @@ if (currentUser.role !== 'system_admin') {
 Admin Routes:
 ├── /admin/login (Admin login)
 ├── /admin/dashboard (Admin dashboard with UserManagement)
-└── API: /api/auth/admin/register-student (New endpoint)
+└── API: /api/auth/admin/register-student (Registrar admin only)
 
 Student Routes:
 ├── /student/login (Student login)
@@ -143,17 +150,20 @@ Student Routes:
 ## 🧪 Testing Scenarios
 
 ### **Happy Path Testing**
-- [ ] System admin can access UserManagement component
+- [ ] Registrar admin can access UserManagement component
+- [ ] Student registration form shows assigned college only
 - [ ] Student registration form validates all fields
 - [ ] Unique email/student ID validation works
-- [ ] Student account created successfully
+- [ ] Student account created successfully for assigned college
 - [ ] Student can login with assigned credentials
 - [ ] Student forced to change password on first login
 
 ### **Permission Testing**
-- [ ] Registrar admins cannot access student registration
+- [ ] System admins cannot access student registration
 - [ ] Other admin types cannot register students
-- [ ] Non-system admins see appropriate error messages
+- [ ] Registrar admins can only register students for their assigned college
+- [ ] College restriction validation works properly
+- [ ] Non-registrar admins see appropriate error messages
 
 ### **Validation Testing**
 - [ ] Duplicate email rejection

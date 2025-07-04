@@ -163,7 +163,7 @@ export const AuthProvider = ({ children }) => {
     
     const permissions = {
       'register_admins': ['system_admin'],
-      'register_students': ['system_admin'],
+      'register_students': ['registrar_admin'],
       'register_registrar_and_department_heads': ['registrar_admin'],
       'view_all_clearances': ['system_admin', 'registrar_admin'],
       'approve_clearances': ['department_head', 'chief_librarian', 'dormitory_proctor', 'dining_officer', 'student_affairs', 'student_discipline', 'cost_sharing'],

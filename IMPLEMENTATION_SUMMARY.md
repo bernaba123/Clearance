@@ -9,18 +9,18 @@
 - **No Admin Registration Page**: Admins are created by authorized personnel only
 
 ### ✅ **Role-Based Access Control**
-- **System Admin**: Can register all admin types AND students
-- **Registrar Admin**: Can register department heads and other registrar admins
+- **System Admin**: Can register all admin types
+- **Registrar Admin**: Can register department heads, other registrar admins, AND students for their assigned college
 - **Department Heads**: Registered by registrar admins
 - **Other Admins**: Registered by system admins
-- **Students**: Can self-register OR be registered by system admins
+- **Students**: Can self-register OR be registered by registrar admins (for their college)
 
 ### ✅ **Backend API Implementation**
 - `POST /api/auth/student/register` - Student registration endpoint (public)
 - `POST /api/auth/student/login` - Student login endpoint
 - `POST /api/auth/admin/login` - Admin login endpoint
 - `POST /api/auth/admin/register` - Protected admin registration endpoint
-- `POST /api/auth/admin/register-student` - System admin student registration endpoint
+- `POST /api/auth/admin/register-student` - Registrar admin student registration endpoint
 
 ### ✅ **Security & Permissions**
 - Role-based route protection
@@ -94,9 +94,15 @@ The system is ready for testing with:
 ### For System Admins:
 1. Login at `/admin/login` 
 2. Navigate to admin dashboard
-3. Use `UserManagement` component to register admins AND students
-4. Choose between student registration and admin registration tabs
-5. Assign appropriate roles and permissions
+3. Use `UserManagement` component to register other admins
+4. Assign appropriate roles and permissions (including college assignments for registrar admins)
+
+### For Registrar Admins:
+1. Login at `/admin/login`
+2. Navigate to admin dashboard  
+3. Use `UserManagement` component to register department heads, other registrar admins, AND students
+4. Can only register students for their assigned college
+5. College assignment is enforced by the system
 
 ---
 

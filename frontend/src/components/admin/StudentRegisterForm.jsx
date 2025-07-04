@@ -5,10 +5,15 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 
 const StudentRegisterForm = ({ onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const { adminRegisterStudent } = useAuth();
-  const { register, handleSubmit, watch, formState: { errors } } = useForm();
+  const { adminRegisterStudent, user } = useAuth();
+  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      college: user?.college || ''
+    }
+  });
 
   const watchCollege = watch('college');
+  const effectiveCollege = user?.college || watchCollege;
 
   const departments = {
     engineering: [
@@ -127,15 +132,33 @@ const StudentRegisterForm = ({ onClose, onSuccess }) => {
           <label className="block text-sm font-medium text-gray-700">
             College
           </label>
-          <select
-            {...register('college', { required: 'College is required' })}
-            className="input-field mt-1"
-          >
-            <option value="">Select college</option>
-            <option value="engineering">College of Engineering</option>
-            <option value="natural_science">College of Natural and Applied Science</option>
-            <option value="social_science">College of Social Science and Humanities</option>
-          </select>
+          {user?.college ? (
+            <div>
+              <input
+                {...register('college', { value: user.college })}
+                type="hidden"
+                value={user.college}
+              />
+              <div className="input-field mt-1 bg-gray-50 text-gray-700">
+                {user.college === 'engineering' && 'College of Engineering'}
+                {user.college === 'natural_science' && 'College of Natural and Applied Science'}
+                {user.college === 'social_science' && 'College of Social Science and Humanities'}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                You can only register students for your assigned college.
+              </p>
+            </div>
+          ) : (
+            <select
+              {...register('college', { required: 'College is required' })}
+              className="input-field mt-1"
+            >
+              <option value="">Select college</option>
+              <option value="engineering">College of Engineering</option>
+              <option value="natural_science">College of Natural and Applied Science</option>
+              <option value="social_science">College of Social Science and Humanities</option>
+            </select>
+          )}
           {errors.college && (
             <p className="mt-1 text-sm text-red-600">{errors.college.message}</p>
           )}
@@ -150,7 +173,7 @@ const StudentRegisterForm = ({ onClose, onSuccess }) => {
             className="input-field mt-1"
           >
             <option value="">Select department</option>
-            {watchCollege && departments[watchCollege]?.map((dept) => (
+            {effectiveCollege && departments[effectiveCollege]?.map((dept) => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>
