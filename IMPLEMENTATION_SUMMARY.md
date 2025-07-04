@@ -9,16 +9,18 @@
 - **No Admin Registration Page**: Admins are created by authorized personnel only
 
 ### ✅ **Role-Based Access Control**
-- **System Admin**: Can register all admin types
+- **System Admin**: Can register all admin types AND students
 - **Registrar Admin**: Can register department heads and other registrar admins
 - **Department Heads**: Registered by registrar admins
 - **Other Admins**: Registered by system admins
+- **Students**: Can self-register OR be registered by system admins
 
 ### ✅ **Backend API Implementation**
-- `POST /api/auth/student/register` - Student registration endpoint
+- `POST /api/auth/student/register` - Student registration endpoint (public)
 - `POST /api/auth/student/login` - Student login endpoint
 - `POST /api/auth/admin/login` - Admin login endpoint
 - `POST /api/auth/admin/register` - Protected admin registration endpoint
+- `POST /api/auth/admin/register-student` - System admin student registration endpoint
 
 ### ✅ **Security & Permissions**
 - Role-based route protection
@@ -40,7 +42,9 @@ frontend/src/pages/auth/student/StudentLogin.jsx
 frontend/src/pages/auth/student/StudentRegister.jsx
 frontend/src/pages/auth/admin/AdminLogin.jsx
 frontend/src/components/admin/AdminRegisterForm.jsx
-frontend/src/components/admin/AdminUserManagement.jsx
+frontend/src/components/admin/StudentRegisterForm.jsx
+frontend/src/components/admin/AdminUserManagement.jsx (deprecated)
+frontend/src/components/admin/UserManagement.jsx
 AUTHENTICATION_IMPLEMENTATION.md
 IMPLEMENTATION_SUMMARY.md
 ```
@@ -90,8 +94,9 @@ The system is ready for testing with:
 ### For System Admins:
 1. Login at `/admin/login` 
 2. Navigate to admin dashboard
-3. Use `AdminUserManagement` component to register other admins
-4. Assign appropriate roles and permissions
+3. Use `UserManagement` component to register admins AND students
+4. Choose between student registration and admin registration tabs
+5. Assign appropriate roles and permissions
 
 ---
 

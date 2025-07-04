@@ -100,6 +100,13 @@ const permissions = {
 - Department selection for department heads
 - Temporary password assignment with forced change
 
+#### StudentRegisterForm Component (Admin Use)
+- **System Admins** can register students from admin dashboard
+- Complete student profile collection
+- Student ID and email validation
+- Automatic password generation with forced change
+- Optional email notification to student
+
 ## 🛡️ Security Implementation
 
 ### Frontend Security
@@ -151,14 +158,15 @@ const permissions = {
 
 ### Student Endpoints
 ```
-POST /api/auth/student/register - Student registration
+POST /api/auth/student/register - Student registration (public)
 POST /api/auth/student/login    - Student login
 ```
 
 ### Admin Endpoints
 ```
-POST /api/auth/admin/login      - Admin login
-POST /api/auth/admin/register   - Admin registration (protected)
+POST /api/auth/admin/login            - Admin login
+POST /api/auth/admin/register         - Admin registration (protected)
+POST /api/auth/admin/register-student - Student registration by admin (system admin only)
 ```
 
 ### Legacy Endpoints (Backward Compatibility)

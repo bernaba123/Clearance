@@ -284,6 +284,84 @@ router.post('/admin/register', authenticate, [
   }
 });
 
+// Admin Student Registration Route (only accessible by system admins)
+router.post('/admin/register-student', authenticate, [
+  body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
+  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  body('studentId').trim().isLength({ min: 1 }).withMessage('Student ID is required'),
+  body('college').isIn(['engineering', 'natural_science', 'social_science']).withMessage('Invalid college'),
+  body('department').trim().isLength({ min: 1 }).withMessage('Department is required'),
+  body('yearLevel').isIn(['1', '2', '3', '4', '5']).withMessage('Invalid year level')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { fullName, email, password, studentId, department, college, yearLevel, sendEmail } = req.body;
+    const currentUser = req.user;
+
+    // Check permissions - only system admins can register students
+    if (currentUser.role !== 'system_admin') {
+      return res.status(403).json({ 
+        message: 'Only system administrators can register students' 
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ 
+      $or: [{ email }, { studentId }] 
+    });
+    if (existingUser) {
+      return res.status(400).json({ 
+        message: existingUser.email === email ? 'Email already registered' : 'Student ID already exists'
+      });
+    }
+
+    // Create student user
+    const userData = {
+      fullName,
+      email,
+      password,
+      role: 'student',
+      studentId,
+      department,
+      college,
+      yearLevel,
+      isActive: true,
+      mustChangePassword: true // Force password change on first login
+    };
+
+    const user = new User(userData);
+    await user.save();
+
+    // TODO: If sendEmail is true, send email with credentials
+    // This would require email service configuration
+
+    res.status(201).json({ 
+      message: 'Student account created successfully',
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        studentId: user.studentId,
+        department: user.department,
+        college: user.college,
+        yearLevel: user.yearLevel
+      }
+    });
+  } catch (error) {
+    console.error('Admin student registration error:', error);
+    res.status(500).json({ message: 'Server error during student registration' });
+  }
+});
+
 // Legacy routes for backward compatibility
 router.post('/register', [
   body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),

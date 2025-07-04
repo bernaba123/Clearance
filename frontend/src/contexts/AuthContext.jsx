@@ -128,6 +128,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Admin student registration (only accessible by system admins)
+  const adminRegisterStudent = async (userData) => {
+    try {
+      const response = await axios.post('/api/auth/admin/register-student', userData);
+      toast.success('Student account created successfully!');
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Student registration failed');
+      return false;
+    }
+  };
+
   // Get user role display name
   const getRoleDisplayName = (role) => {
     const roleNames = {
@@ -151,6 +163,7 @@ export const AuthProvider = ({ children }) => {
     
     const permissions = {
       'register_admins': ['system_admin'],
+      'register_students': ['system_admin'],
       'register_registrar_and_department_heads': ['registrar_admin'],
       'view_all_clearances': ['system_admin', 'registrar_admin'],
       'approve_clearances': ['department_head', 'chief_librarian', 'dormitory_proctor', 'dining_officer', 'student_affairs', 'student_discipline', 'cost_sharing'],
@@ -185,6 +198,7 @@ export const AuthProvider = ({ children }) => {
     adminLogin,
     studentRegister,
     adminRegister,
+    adminRegisterStudent,
     logout,
     loading,
     hasPermission,
