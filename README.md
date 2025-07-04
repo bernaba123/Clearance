@@ -212,10 +212,6 @@ aastu-clearance-system/
    - Ensure `JWT_SECRET` is set in `.env`
    - Clear browser localStorage if needed
 
-## 📄 License
-
-This project is licensed under AASTU.
-All Rights Reserved
 
 
 ## 👥 Team
