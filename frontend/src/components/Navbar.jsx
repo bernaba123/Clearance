@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, GraduationCap, User, LogOut } from 'lucide-react';
+import { Menu, X, GraduationCap, User, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
+  const [showAuthMenu, setShowAuthMenu] = useState(false);
 
   return (
     <nav className="bg-white shadow-lg border-b-4 border-aastu-blue">
@@ -44,25 +40,60 @@ const Navbar = () => {
             
             {user ? (
               <div className="flex items-center space-x-4">
-                <Link to="/dashboard" className="btn-primary">
+                <span className="text-gray-700">Welcome, {user.fullName}</span>
+                <Link
+                  to={user.role === 'student' ? '/student/dashboard' : '/admin/dashboard'}
+                  className="text-aastu-blue hover:text-blue-700"
+                >
                   Dashboard
                 </Link>
-                <div className="flex items-center space-x-2">
-                  <User className="h-5 w-5 text-gray-600" />
-                  <span className="text-sm text-gray-700">{user.fullName}</span>
-                </div>
-                <button onClick={handleLogout} className="text-gray-600 hover:text-red-600">
-                  <LogOut className="h-5 w-5" />
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate('/');
+                  }}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition duration-200"
+                >
+                  Logout
                 </button>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                <Link to="/login" className="text-gray-700 hover:text-aastu-blue">
-                  Login
-                </Link>
-                <Link to="/register" className="btn-primary">
-                  Register
-                </Link>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowAuthMenu(!showAuthMenu)}
+                    className="text-gray-700 hover:text-aastu-blue flex items-center"
+                  >
+                    Sign In
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </button>
+                  {showAuthMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                      <Link
+                        to="/student/login"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setShowAuthMenu(false)}
+                      >
+                        Student Login
+                      </Link>
+                      <Link
+                        to="/admin/login"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setShowAuthMenu(false)}
+                      >
+                        Admin Login
+                      </Link>
+                      <div className="border-t border-gray-100"></div>
+                      <Link
+                        to="/student/register"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setShowAuthMenu(false)}
+                      >
+                        Student Registration
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -115,7 +146,7 @@ const Navbar = () => {
             {user ? (
               <>
                 <Link
-                  to="/dashboard"
+                  to={user.role === 'student' ? '/student/dashboard' : '/admin/dashboard'}
                   className="block px-3 py-2 text-aastu-blue font-medium"
                   onClick={() => setIsOpen(false)}
                 >
@@ -123,8 +154,9 @@ const Navbar = () => {
                 </Link>
                 <button
                   onClick={() => {
-                    handleLogout();
+                    logout();
                     setIsOpen(false);
+                    navigate('/');
                   }}
                   className="block w-full text-left px-3 py-2 text-red-600"
                 >
@@ -133,19 +165,32 @@ const Navbar = () => {
               </>
             ) : (
               <>
+                <div className="px-3 py-2 text-sm font-medium text-gray-500">
+                  Student
+                </div>
                 <Link
-                  to="/login"
-                  className="block px-3 py-2 text-gray-700 hover:text-aastu-blue"
+                  to="/student/login"
+                  className="block px-3 py-2 text-gray-700 hover:text-aastu-blue ml-4"
                   onClick={() => setIsOpen(false)}
                 >
-                  Login
+                  Student Login
                 </Link>
                 <Link
-                  to="/register"
-                  className="block px-3 py-2 text-aastu-blue font-medium"
+                  to="/student/register"
+                  className="block px-3 py-2 text-aastu-blue ml-4"
                   onClick={() => setIsOpen(false)}
                 >
-                  Register
+                  Student Registration
+                </Link>
+                <div className="px-3 py-2 text-sm font-medium text-gray-500 mt-2">
+                  Administrator
+                </div>
+                <Link
+                  to="/admin/login"
+                  className="block px-3 py-2 text-gray-700 hover:text-aastu-blue ml-4"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Admin Login
                 </Link>
               </>
             )}
