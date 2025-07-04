@@ -44,7 +44,7 @@ Before running this application, make sure you have the following installed:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/aastu-clearance-system.git
+git clone https://github.com/bernaba123/aastu-clearance-system.git
 cd aastu-clearance-system
 ```
 
@@ -214,7 +214,9 @@ aastu-clearance-system/
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under AASTU.
+All Rights Reserved
+
 
 ## 👥 Team
 
