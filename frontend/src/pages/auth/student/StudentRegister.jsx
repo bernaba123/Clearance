@@ -1,19 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, UserPlus, GraduationCap } from 'lucide-react';
+import { Eye, EyeOff, UserPlus, GraduationCap, XCircle } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
+import axios from 'axios';
 
 const StudentRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [systemStatus, setSystemStatus] = useState({ registrationActive: true });
+  const [statusLoading, setStatusLoading] = useState(true);
   const { studentRegister } = useAuth();
   const navigate = useNavigate();
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
 
   const password = watch('password');
   const watchCollege = watch('college');
+
+  useEffect(() => {
+    checkSystemStatus();
+  }, []);
+
+  const checkSystemStatus = async () => {
+    try {
+      const response = await axios.get('/api/admin/public/system-status');
+      setSystemStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching system status:', error);
+    } finally {
+      setStatusLoading(false);
+    }
+  };
 
   const departments = {
     engineering: [
@@ -40,6 +58,10 @@ const StudentRegister = () => {
   };
 
   const onSubmit = async (data) => {
+    if (!systemStatus.registrationActive) {
+      return;
+    }
+    
     setLoading(true);
     const studentData = {
       ...data,
@@ -61,18 +83,39 @@ const StudentRegister = () => {
           <p className="mt-2 text-sm text-gray-600">
             Create your student account to access the clearance system
           </p>
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-700">
-              Already have an account?{' '}
-              <Link to="/student/login" className="font-medium text-aastu-blue hover:text-blue-700">
-                Sign in here
-              </Link>
-            </p>
-          </div>
+          
+          {!statusLoading && !systemStatus.registrationActive && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex justify-center items-center">
+                <XCircle className="h-5 w-5 text-red-500 mr-2" />
+                <p className="text-sm text-red-700">
+                  <strong>Registration Disabled:</strong> Student registration is currently disabled. 
+                  Please contact the administration for more information.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {!statusLoading && systemStatus.registrationActive && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700">
+                Already have an account?{' '}
+                <Link to="/student/login" className="font-medium text-aastu-blue hover:text-blue-700">
+                  Sign in here
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-4">
+        {statusLoading ? (
+          <div className="mt-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-aastu-blue mx-auto"></div>
+            <p className="mt-2 text-gray-600">Checking system status...</p>
+          </div>
+        ) : systemStatus.registrationActive ? (
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Full Name
@@ -284,6 +327,11 @@ const StudentRegister = () => {
             </button>
           </div>
         </form>
+        ) : (
+          <div className="mt-8 text-center">
+            <p className="text-gray-600">Registration is currently disabled. Please check back later.</p>
+          </div>
+        )}
       </div>
     </div>
   );

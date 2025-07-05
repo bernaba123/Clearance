@@ -1,24 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Clock, CheckCircle, AlertCircle, Download } from 'lucide-react';
+import { FileText, Clock, CheckCircle, AlertCircle, Download, XCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import axios from 'axios';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
   const [clearanceStatus, setClearanceStatus] = useState(null);
+  const [systemStatus, setSystemStatus] = useState({ clearanceSystemActive: true, registrationActive: true });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchClearanceStatus();
+    fetchDashboardData();
   }, []);
 
-  const fetchClearanceStatus = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const response = await axios.get('/api/clearance/status');
-      setClearanceStatus(response.data);
+      // Fetch system status first
+      const systemResponse = await axios.get('/api/admin/public/system-status');
+      setSystemStatus(systemResponse.data);
+
+      // Only fetch clearance status if system is active
+      if (systemResponse.data.clearanceSystemActive) {
+        try {
+          const clearanceResponse = await axios.get('/api/clearance/status');
+          setClearanceStatus(clearanceResponse.data);
+        } catch (error) {
+          // If no clearance found, that's okay - student hasn't applied yet
+          if (error.response?.status === 404) {
+            setClearanceStatus(null);
+          } else if (error.response?.status === 503 && error.response?.data?.systemDeactivated) {
+            // System is deactivated - this is handled by the system status check above
+            setClearanceStatus(null);
+          } else {
+            console.error('Error fetching clearance status:', error);
+          }
+        }
+      }
     } catch (error) {
-      console.error('Error fetching clearance status:', error);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -64,59 +84,120 @@ const StudentDashboard = () => {
         </div>
       </div>
 
+      {/* System Status Alert */}
+      {!systemStatus.clearanceSystemActive && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <XCircle className="h-5 w-5 text-red-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                <strong>System Notice:</strong> The clearance system is currently deactivated. 
+                Please contact the administration for more information.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link
-          to="/dashboard/apply"
-          className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
-        >
-          <div className="px-4 py-5 sm:p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <FileText className="h-8 w-8 text-aastu-blue" />
+        {systemStatus.clearanceSystemActive ? (
+          <Link
+            to="/student/dashboard/apply"
+            className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+          >
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <FileText className="h-8 w-8 text-aastu-blue" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Apply for Clearance
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      Start Application
+                    </dd>
+                  </dl>
+                </div>
               </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Apply for Clearance
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    Start Application
-                  </dd>
-                </dl>
+            </div>
+          </Link>
+        ) : (
+          <div className="bg-gray-100 overflow-hidden shadow rounded-lg opacity-50 cursor-not-allowed">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <FileText className="h-8 w-8 text-gray-400" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Apply for Clearance
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      System Disabled
+                    </dd>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
-        </Link>
+        )}
 
-        <Link
-          to="/dashboard/status"
-          className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
-        >
-          <div className="px-4 py-5 sm:p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Clock className="h-8 w-8 text-aastu-green" />
+        {systemStatus.clearanceSystemActive ? (
+          <Link
+            to="/student/dashboard/status"
+            className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+          >
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Clock className="h-8 w-8 text-aastu-green" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      View Status
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      Track Progress
+                    </dd>
+                  </dl>
+                </div>
               </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    View Status
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    Track Progress
-                  </dd>
-                </dl>
+            </div>
+          </Link>
+        ) : (
+          <div className="bg-gray-100 overflow-hidden shadow rounded-lg opacity-50 cursor-not-allowed">
+            <div className="px-4 py-5 sm:p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Clock className="h-8 w-8 text-gray-400" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      View Status
+                    </dt>
+                    <dd className="text-lg font-medium text-gray-900">
+                      System Disabled
+                    </dd>
+                  </dl>
+                </div>
               </div>
             </div>
           </div>
-        </Link>
+        )}
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className={`overflow-hidden shadow rounded-lg ${systemStatus.clearanceSystemActive ? 'bg-white' : 'bg-gray-100 opacity-50 cursor-not-allowed'}`}>
           <div className="px-4 py-5 sm:p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Download className="h-8 w-8 text-aastu-gold" />
+                <Download className={`h-8 w-8 ${systemStatus.clearanceSystemActive ? 'text-aastu-gold' : 'text-gray-400'}`} />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
@@ -124,7 +205,8 @@ const StudentDashboard = () => {
                     Download Certificate
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {clearanceStatus?.status === 'completed' ? 'Available' : 'Not Ready'}
+                    {!systemStatus.clearanceSystemActive ? 'System Disabled' : 
+                     clearanceStatus?.status === 'completed' ? 'Available' : 'Not Ready'}
                   </dd>
                 </dl>
               </div>
@@ -134,7 +216,7 @@ const StudentDashboard = () => {
       </div>
 
       {/* Current Application Status */}
-      {clearanceStatus && (
+      {systemStatus.clearanceSystemActive && clearanceStatus && (
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Current Application Status</h2>

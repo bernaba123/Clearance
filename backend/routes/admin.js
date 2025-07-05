@@ -710,4 +710,22 @@ router.post('/other-admin/clearance/:id/:action', authenticate, async (req, res)
   }
 });
 
+// Public system status endpoint (for students to check system status)
+router.get('/public/system-status', async (req, res) => {
+  try {
+    const [clearanceSystemActive, registrationActive] = await Promise.all([
+      SystemSettings.getSetting('clearanceSystemActive', true),
+      SystemSettings.getSetting('registrationActive', true)
+    ]);
+
+    res.json({
+      clearanceSystemActive,
+      registrationActive
+    });
+  } catch (error) {
+    console.error('Get public system status error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 export default router;

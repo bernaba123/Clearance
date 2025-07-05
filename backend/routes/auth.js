@@ -3,11 +3,12 @@ import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
+import { checkRegistrationSystemStatus } from '../middleware/systemStatus.js';
 
 const router = express.Router();
 
 // Student Registration Route
-router.post('/student/register', [
+router.post('/student/register', checkRegistrationSystemStatus, [
   body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
@@ -375,7 +376,7 @@ router.post('/admin/register-student', authenticate, [
 });
 
 // Legacy routes for backward compatibility
-router.post('/register', [
+router.post('/register', checkRegistrationSystemStatus, [
   body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),

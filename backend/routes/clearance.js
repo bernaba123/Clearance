@@ -3,12 +3,13 @@ import { body, validationResult } from 'express-validator';
 import Clearance from '../models/Clearance.js';
 import User from '../models/User.js';
 import { authenticate, isStudent, isAnyAdmin } from '../middleware/auth.js';
+import { checkClearanceSystemStatus } from '../middleware/systemStatus.js';
 import jsPDF from 'jspdf';
 
 const router = express.Router();
 
 // Apply for clearance (Students only)
-router.post('/apply', authenticate, isStudent, [
+router.post('/apply', authenticate, isStudent, checkClearanceSystemStatus, [
   body('isEarlyApplication').isBoolean().withMessage('isEarlyApplication must be boolean'),
   body('earlyReason').optional().trim(),
   body('additionalInfo').optional().trim(),
@@ -66,7 +67,7 @@ router.post('/apply', authenticate, isStudent, [
 });
 
 // Get clearance status (Students only)
-router.get('/status', authenticate, isStudent, async (req, res) => {
+router.get('/status', authenticate, isStudent, checkClearanceSystemStatus, async (req, res) => {
   try {
     const clearance = await Clearance.findOne({ 
       student: req.user._id 
@@ -162,7 +163,7 @@ router.post('/:id/review', authenticate, isAnyAdmin, [
 });
 
 // Generate and download clearance certificate
-router.get('/certificate', authenticate, isStudent, async (req, res) => {
+router.get('/certificate', authenticate, isStudent, checkClearanceSystemStatus, async (req, res) => {
   try {
     const clearance = await Clearance.findOne({ 
       student: req.user._id,
