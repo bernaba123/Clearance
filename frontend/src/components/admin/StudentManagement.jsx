@@ -76,7 +76,7 @@ const StudentManagement = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await axios.get('/api/registrar/students');
+      const response = await axios.get('/api/admin/registrar/students');
       setStudents(response.data);
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -98,11 +98,11 @@ const StudentManagement = () => {
       };
 
       if (editingStudent) {
-        const response = await axios.put(`/api/registrar/students/${editingStudent._id}`, studentData);
+        const response = await axios.put(`/api/admin/registrar/students/${editingStudent._id}`, studentData);
         console.log('Update response:', response.data);
         toast.success('Student updated successfully');
       } else {
-        const response = await axios.post('/api/registrar/students', studentData);
+        const response = await axios.post('/api/admin/registrar/students', studentData);
         console.log('Create response:', response.data);
         toast.success('Student created successfully');
       }
@@ -146,7 +146,7 @@ const StudentManagement = () => {
   const handleDelete = async (studentId, studentName) => {
     if (window.confirm(`Are you sure you want to delete ${studentName}?`)) {
       try {
-        await axios.delete(`/api/registrar/students/${studentId}`);
+        await axios.delete(`/api/admin/registrar/students/${studentId}`);
         toast.success('Student deleted successfully');
         fetchStudents();
       } catch (error) {

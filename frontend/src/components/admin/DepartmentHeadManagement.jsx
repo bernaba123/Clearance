@@ -74,7 +74,7 @@ const DepartmentHeadManagement = () => {
 
   const fetchDepartmentHeads = async () => {
     try {
-      const response = await axios.get('/api/registrar/department-heads');
+      const response = await axios.get('/api/admin/registrar/department-heads');
       setDepartmentHeads(response.data);
     } catch (error) {
       console.error('Error fetching department heads:', error);
@@ -96,11 +96,11 @@ const DepartmentHeadManagement = () => {
       };
 
       if (editingHead) {
-        const response = await axios.put(`/api/registrar/department-heads/${editingHead._id}`, headData);
+        const response = await axios.put(`/api/admin/registrar/department-heads/${editingHead._id}`, headData);
         console.log('Update response:', response.data);
         toast.success('Department head updated successfully');
       } else {
-        const response = await axios.post('/api/registrar/department-heads', headData);
+        const response = await axios.post('/api/admin/registrar/department-heads', headData);
         console.log('Create response:', response.data);
         toast.success('Department head created successfully');
       }
@@ -140,7 +140,7 @@ const DepartmentHeadManagement = () => {
   const handleDelete = async (headId, headName) => {
     if (window.confirm(`Are you sure you want to delete ${headName}?`)) {
       try {
-        await axios.delete(`/api/registrar/department-heads/${headId}`);
+        await axios.delete(`/api/admin/registrar/department-heads/${headId}`);
         toast.success('Department head deleted successfully');
         fetchDepartmentHeads();
       } catch (error) {
