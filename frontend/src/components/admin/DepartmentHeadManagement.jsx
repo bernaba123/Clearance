@@ -49,7 +49,7 @@ const DepartmentHeadManagement = () => {
     ]
   };
 
-  // Get departments for current user's college or all departments as fallback
+  // Get departments for current user's college ONLY (no fallback for security)
   const getAvailableDepartments = () => {
     const userCollege = user?.college;
     console.log('DeptHead - Getting departments for college:', userCollege);
@@ -59,10 +59,9 @@ const DepartmentHeadManagement = () => {
       return departments[userCollege];
     }
     
-    // Fallback: return all departments if no college specified or college not found
-    const allDepartments = Object.values(departments).flat();
-    console.log('DeptHead - Using fallback - all departments:', allDepartments);
-    return allDepartments;
+    // No fallback - registrar should only see their college departments
+    console.warn('DeptHead - No departments found for college:', userCollege);
+    return [];
   };
 
   useEffect(() => {
@@ -86,6 +85,19 @@ const DepartmentHeadManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate college and department
+    if (!user?.college) {
+      toast.error('No college assigned to your account. Please contact system administrator.');
+      return;
+    }
+    
+    const availableDepartments = getAvailableDepartments();
+    if (!availableDepartments.includes(formData.department)) {
+      toast.error(`Invalid department. You can only add department heads to departments in ${colleges[user.college]}.`);
+      return;
+    }
+    
     try {
       console.log('Submitting department head data:', { ...formData, password: formData.password ? '[HIDDEN]' : 'Not provided' });
       
@@ -173,8 +185,18 @@ const DepartmentHeadManagement = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Department Head Management</h1>
           <p className="text-gray-600">
-            Manage department heads in {colleges[user?.college]} - {user?.college ? departmentHeads.length : 0} department heads
+            Manage department heads in {colleges[user?.college] || 'Unknown College'} - {departmentHeads.length} department heads
           </p>
+          {!user?.college && (
+            <div className="mt-2 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              ⚠️ No college assigned to your account. Please contact system administrator.
+            </div>
+          )}
+          {user?.college && getAvailableDepartments().length === 0 && (
+            <div className="mt-2 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+              ⚠️ No departments found for {colleges[user.college]}. You can only manage users within your assigned college.
+            </div>
+          )}
         </div>
         <button
           onClick={() => {
@@ -187,7 +209,19 @@ const DepartmentHeadManagement = () => {
             });
             setShowModal(true);
           }}
-          className="bg-aastu-blue text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center"
+          disabled={!user?.college || getAvailableDepartments().length === 0}
+          className={`px-4 py-2 rounded-md flex items-center ${
+            !user?.college || getAvailableDepartments().length === 0
+              ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+              : 'bg-aastu-blue text-white hover:bg-blue-700'
+          }`}
+          title={
+            !user?.college
+              ? 'No college assigned'
+              : getAvailableDepartments().length === 0
+              ? 'No departments available for your college'
+              : 'Add new department head'
+          }
         >
           <UserPlus className="h-4 w-4 mr-2" />
           Add New Department Head

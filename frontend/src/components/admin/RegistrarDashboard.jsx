@@ -24,7 +24,7 @@ const RegistrarDashboard = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      const response = await axios.get('/api/registrar/dashboard-stats');
+      const response = await axios.get('/api/admin/registrar/dashboard-stats');
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -35,7 +35,7 @@ const RegistrarDashboard = () => {
 
   const fetchCollegeClearances = async () => {
     try {
-      const response = await axios.get('/api/registrar/clearances');
+      const response = await axios.get('/api/admin/registrar/clearances');
       setClearances(response.data);
     } catch (error) {
       console.error('Error fetching clearances:', error);
@@ -44,7 +44,7 @@ const RegistrarDashboard = () => {
 
   const handleClearanceAction = async (clearanceId, action) => {
     try {
-      await axios.post(`/api/registrar/clearance/${clearanceId}/${action}`);
+      await axios.post(`/api/admin/registrar/clearance/${clearanceId}/${action}`);
       toast.success(`Clearance ${action}d successfully`);
       fetchCollegeClearances();
       fetchDashboardStats();
@@ -59,7 +59,16 @@ const RegistrarDashboard = () => {
       'natural_sciences': 'Natural & Computational Sciences',
       'social_sciences': 'Social Sciences & Humanities'
     };
-    return collegeMap[user?.college] || user?.college;
+    return collegeMap[user?.college] || user?.college || 'Unknown College';
+  };
+
+  const getShortCollegeName = () => {
+    const collegeMap = {
+      'engineering': 'Engineering & Technology',
+      'natural_sciences': 'Natural & Computational Sciences',
+      'social_sciences': 'Social Sciences & Humanities'
+    };
+    return collegeMap[user?.college] || 'Unknown College';
   };
 
   if (loading) {
@@ -75,7 +84,12 @@ const RegistrarDashboard = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Registrar Dashboard</h1>
-        <p className="text-gray-600">College of {getCollegeName()}</p>
+        <p className="text-gray-600">{getShortCollegeName()}</p>
+        {!user?.college && (
+          <div className="mt-2 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            ⚠️ No college assigned to your account. Please contact system administrator.
+          </div>
+        )}
       </div>
 
       {/* Tab Navigation */}

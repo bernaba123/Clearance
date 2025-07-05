@@ -768,6 +768,19 @@ router.post('/registrar/students', authenticate, [
       return res.status(400).json({ message: 'Registrar admin must have a college assigned' });
     }
 
+    // Validate department belongs to registrar's college
+    const collegeDepartments = {
+      engineering: ['Architecture', 'Chemical Engineering', 'Civil Engineering', 'Electrical and Computer Engineering', 'Electromechanical Engineering', 'Environmental Engineering', 'Mechanical Engineering', 'Mining Engineering', 'Software Engineering'],
+      natural_sciences: ['Biotechnology', 'Food Science and Applied Nutrition', 'Geology', 'Industrial Chemistry'],
+      social_sciences: ['Freshman', 'Pre-Engineering']
+    };
+    
+    if (!collegeDepartments[college] || !collegeDepartments[college].includes(req.body.department)) {
+      return res.status(400).json({ 
+        message: `Invalid department. Department "${req.body.department}" does not belong to ${college} college.` 
+      });
+    }
+
     const studentData = {
       ...req.body,
       role: 'student',
@@ -838,13 +851,31 @@ router.put('/registrar/students/:id', authenticate, [
     const updateData = { ...req.body };
     console.log('Updating student with data:', { ...updateData, password: updateData.password ? '[HIDDEN]' : 'Not provided' });
 
+    const college = req.user.college;
+    if (!college) {
+      return res.status(400).json({ message: 'Registrar admin must have a college assigned' });
+    }
+
+    // Validate department belongs to registrar's college
+    const collegeDepartments = {
+      engineering: ['Architecture', 'Chemical Engineering', 'Civil Engineering', 'Electrical and Computer Engineering', 'Electromechanical Engineering', 'Environmental Engineering', 'Mechanical Engineering', 'Mining Engineering', 'Software Engineering'],
+      natural_sciences: ['Biotechnology', 'Food Science and Applied Nutrition', 'Geology', 'Industrial Chemistry'],
+      social_sciences: ['Freshman', 'Pre-Engineering']
+    };
+    
+    if (!collegeDepartments[college] || !collegeDepartments[college].includes(updateData.department)) {
+      return res.status(400).json({ 
+        message: `Invalid department. Department "${updateData.department}" does not belong to ${college} college.` 
+      });
+    }
+
     // Remove password from update if it's empty
     if (!updateData.password || updateData.password.trim() === '') {
       delete updateData.password;
     }
 
     // Ensure college matches registrar's college
-    updateData.college = req.user.college;
+    updateData.college = college;
 
     // Check if student exists and belongs to registrar's college
     const existingStudent = await User.findOne({ 
@@ -988,6 +1019,19 @@ router.post('/registrar/department-heads', authenticate, [
       return res.status(400).json({ message: 'Registrar admin must have a college assigned' });
     }
 
+    // Validate department belongs to registrar's college
+    const collegeDepartments = {
+      engineering: ['Architecture', 'Chemical Engineering', 'Civil Engineering', 'Electrical and Computer Engineering', 'Electromechanical Engineering', 'Environmental Engineering', 'Mechanical Engineering', 'Mining Engineering', 'Software Engineering'],
+      natural_sciences: ['Biotechnology', 'Food Science and Applied Nutrition', 'Geology', 'Industrial Chemistry'],
+      social_sciences: ['Freshman', 'Pre-Engineering']
+    };
+    
+    if (!collegeDepartments[college] || !collegeDepartments[college].includes(req.body.department)) {
+      return res.status(400).json({ 
+        message: `Invalid department. Department "${req.body.department}" does not belong to ${college} college.` 
+      });
+    }
+
     const headData = {
       ...req.body,
       role: 'department_head',
@@ -1064,13 +1108,31 @@ router.put('/registrar/department-heads/:id', authenticate, [
     const updateData = { ...req.body };
     console.log('Updating department head with data:', { ...updateData, password: updateData.password ? '[HIDDEN]' : 'Not provided' });
 
+    const college = req.user.college;
+    if (!college) {
+      return res.status(400).json({ message: 'Registrar admin must have a college assigned' });
+    }
+
+    // Validate department belongs to registrar's college
+    const collegeDepartments = {
+      engineering: ['Architecture', 'Chemical Engineering', 'Civil Engineering', 'Electrical and Computer Engineering', 'Electromechanical Engineering', 'Environmental Engineering', 'Mechanical Engineering', 'Mining Engineering', 'Software Engineering'],
+      natural_sciences: ['Biotechnology', 'Food Science and Applied Nutrition', 'Geology', 'Industrial Chemistry'],
+      social_sciences: ['Freshman', 'Pre-Engineering']
+    };
+    
+    if (!collegeDepartments[college] || !collegeDepartments[college].includes(updateData.department)) {
+      return res.status(400).json({ 
+        message: `Invalid department. Department "${updateData.department}" does not belong to ${college} college.` 
+      });
+    }
+
     // Remove password from update if it's empty
     if (!updateData.password || updateData.password.trim() === '') {
       delete updateData.password;
     }
 
     // Ensure college matches registrar's college
-    updateData.college = req.user.college;
+    updateData.college = college;
 
     // Check if department head exists and belongs to registrar's college
     const existingHead = await User.findOne({ 
