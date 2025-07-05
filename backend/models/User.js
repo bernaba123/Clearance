@@ -50,9 +50,9 @@ const userSchema = new mongoose.Schema({
   college: {
     type: String,
     required: function() {
-      return this.role === 'student';
+      return this.role === 'student' || this.role === 'registrar_admin';
     },
-    enum: ['engineering', 'natural_science', 'social_science']
+    enum: ['engineering', 'natural_sciences', 'social_sciences']
   },
   yearLevel: {
     type: Number,

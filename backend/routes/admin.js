@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import Clearance from '../models/Clearance.js';
 import News from '../models/News.js';
+import SystemSettings from '../models/SystemSettings.js';
 import { authenticate, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -69,6 +70,7 @@ router.post('/users', authenticate, isAdmin, [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.error('Validation errors:', errors.array());
       return res.status(400).json({ 
         message: 'Validation failed',
         errors: errors.array()
@@ -76,6 +78,7 @@ router.post('/users', authenticate, isAdmin, [
     }
 
     const userData = req.body;
+    console.log('Creating user with data:', { ...userData, password: '[HIDDEN]' });
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: userData.email });
@@ -91,16 +94,156 @@ router.post('/users', authenticate, isAdmin, [
       }
     }
 
-    const user = new User(userData);
+    // Validate required fields based on role
+    if (userData.role === 'registrar_admin' && !userData.college) {
+      return res.status(400).json({ message: 'College is required for registrar administrators' });
+    }
+
+    // Clean up data - remove empty fields that might cause validation issues
+    const cleanUserData = { ...userData };
+    if (!cleanUserData.college || cleanUserData.college === '') {
+      delete cleanUserData.college;
+    }
+    if (!cleanUserData.department || cleanUserData.department === '') {
+      delete cleanUserData.department;
+    }
+    if (!cleanUserData.studentId || cleanUserData.studentId === '') {
+      delete cleanUserData.studentId;
+    }
+    if (!cleanUserData.yearLevel || cleanUserData.yearLevel === '') {
+      delete cleanUserData.yearLevel;
+    }
+
+    const user = new User(cleanUserData);
     await user.save();
 
     res.status(201).json({
       message: 'User created successfully',
-      user
+      user: user.toJSON()
     });
   } catch (error) {
     console.error('Create user error:', error);
-    res.status(500).json({ message: 'Server error during user creation' });
+    console.error('Error details:', error.message);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+    res.status(500).json({ 
+      message: 'Server error during user creation',
+      error: error.message 
+    });
+  }
+});
+
+// Update user
+router.put('/users/:id', authenticate, isAdmin, [
+  body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
+  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('role').isIn([
+    'student',
+    'system_admin',
+    'registrar_admin',
+    'department_head',
+    'chief_librarian',
+    'dormitory_proctor',
+    'dining_officer',
+    'student_affairs',
+    'student_discipline',
+    'cost_sharing'
+  ]).withMessage('Invalid role')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const userId = req.params.id;
+    const updateData = { ...req.body };
+    console.log('Updating user with data:', { ...updateData, password: updateData.password ? '[HIDDEN]' : 'Not provided' });
+
+    // Remove password from update if it's empty (don't update password)
+    if (!updateData.password || updateData.password.trim() === '') {
+      delete updateData.password;
+    }
+
+    // Clean up data - remove empty fields that might cause validation issues
+    if (!updateData.college || updateData.college === '') {
+      delete updateData.college;
+    }
+    if (!updateData.department || updateData.department === '') {
+      delete updateData.department;
+    }
+    if (!updateData.studentId || updateData.studentId === '') {
+      delete updateData.studentId;
+    }
+    if (!updateData.yearLevel || updateData.yearLevel === '') {
+      delete updateData.yearLevel;
+    }
+
+    // Validate required fields based on role
+    if (updateData.role === 'registrar_admin' && !updateData.college) {
+      return res.status(400).json({ message: 'College is required for registrar administrators' });
+    }
+
+    // Check if email is being changed and if it already exists
+    const existingUser = await User.findOne({ 
+      email: updateData.email, 
+      _id: { $ne: userId } 
+    });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    // Check if student ID is being changed and if it already exists (for students)
+    if (updateData.role === 'student' && updateData.studentId) {
+      const existingStudent = await User.findOne({ 
+        studentId: updateData.studentId,
+        _id: { $ne: userId }
+      });
+      if (existingStudent) {
+        return res.status(400).json({ message: 'Student ID already exists' });
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      message: 'User updated successfully',
+      user: user.toJSON()
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    console.error('Error details:', error.message);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+    res.status(500).json({ 
+      message: 'Server error during user update',
+      error: error.message 
+    });
   }
 });
 
@@ -268,11 +411,14 @@ router.get('/system-status', authenticate, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. System admin required.' });
     }
 
-    // For now, return default active status
-    // In a real implementation, this would be stored in a database
+    const [clearanceSystemActive, registrationActive] = await Promise.all([
+      SystemSettings.getSetting('clearanceSystemActive', true),
+      SystemSettings.getSetting('registrationActive', true)
+    ]);
+
     res.json({
-      clearanceSystemActive: true,
-      registrationActive: true
+      clearanceSystemActive,
+      registrationActive
     });
   } catch (error) {
     console.error('Get system status error:', error);
@@ -290,14 +436,33 @@ router.post('/toggle-system', authenticate, async (req, res) => {
 
     const { type } = req.body;
     
-    // For now, return toggled status
-    // In a real implementation, this would update database values
-    const newStatus = {
-      clearanceSystemActive: type === 'clearance' ? !req.body.current : true,
-      registrationActive: type === 'registration' ? !req.body.current : true
-    };
+    if (!['clearance', 'registration'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid system type' });
+    }
 
-    res.json(newStatus);
+    // Get current status
+    const settingKey = type === 'clearance' ? 'clearanceSystemActive' : 'registrationActive';
+    const currentStatus = await SystemSettings.getSetting(settingKey, true);
+    
+    // Toggle the status
+    const newStatus = !currentStatus;
+    await SystemSettings.setSetting(
+      settingKey, 
+      newStatus, 
+      req.user._id,
+      `${type === 'clearance' ? 'Clearance system' : 'Registration'} ${newStatus ? 'activated' : 'deactivated'} by ${req.user.fullName}`
+    );
+
+    // Return all current statuses
+    const [clearanceSystemActive, registrationActive] = await Promise.all([
+      SystemSettings.getSetting('clearanceSystemActive', true),
+      SystemSettings.getSetting('registrationActive', true)
+    ]);
+
+    res.json({
+      clearanceSystemActive,
+      registrationActive
+    });
   } catch (error) {
     console.error('Toggle system status error:', error);
     res.status(500).json({ message: 'Server error' });

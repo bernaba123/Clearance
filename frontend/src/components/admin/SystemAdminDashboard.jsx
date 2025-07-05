@@ -46,8 +46,12 @@ const SystemAdminDashboard = () => {
     try {
       const response = await axios.post('/api/admin/toggle-system', { type });
       setSystemStatus(response.data);
-      toast.success(`${type === 'clearance' ? 'Clearance system' : 'Registration'} ${response.data[type === 'clearance' ? 'clearanceSystemActive' : 'registrationActive'] ? 'activated' : 'deactivated'}`);
+      const statusKey = type === 'clearance' ? 'clearanceSystemActive' : 'registrationActive';
+      const systemName = type === 'clearance' ? 'Clearance system' : 'Registration';
+      const statusText = response.data[statusKey] ? 'activated' : 'deactivated';
+      toast.success(`${systemName} ${statusText} successfully`);
     } catch (error) {
+      console.error('Toggle system status error:', error);
       toast.error('Failed to update system status');
     }
   };

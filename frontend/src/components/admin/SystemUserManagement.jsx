@@ -54,11 +54,15 @@ const SystemUserManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log('Submitting form data:', { ...formData, password: formData.password ? '[HIDDEN]' : 'Not provided' });
+      
       if (editingUser) {
-        await axios.put(`/api/admin/users/${editingUser._id}`, formData);
+        const response = await axios.put(`/api/admin/users/${editingUser._id}`, formData);
+        console.log('Update response:', response.data);
         toast.success('User updated successfully');
       } else {
-        await axios.post('/api/admin/users', formData);
+        const response = await axios.post('/api/admin/users', formData);
+        console.log('Create response:', response.data);
         toast.success('User created successfully');
       }
       setShowModal(false);
@@ -73,7 +77,16 @@ const SystemUserManagement = () => {
       });
       fetchUsers();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Operation failed');
+      console.error('Submit error:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        // Handle validation errors
+        const errorMessages = error.response.data.errors.map(err => err.message || err).join(', ');
+        toast.error(`Validation failed: ${errorMessages}`);
+      } else {
+        toast.error(error.response?.data?.message || error.response?.data?.error || 'Operation failed');
+      }
     }
   };
 
@@ -321,19 +334,19 @@ const SystemUserManagement = () => {
                   </div>
                 )}
                 
-                {!editingUser && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Password</label>
-                    <input
-                      type="password"
-                      required={!editingUser}
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-aastu-blue focus:border-aastu-blue"
-                      placeholder={editingUser ? "Leave blank to keep current password" : ""}
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Password {editingUser && <span className="text-gray-500 text-xs">(leave blank to keep current)</span>}
+                  </label>
+                  <input
+                    type="password"
+                    required={!editingUser}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-aastu-blue focus:border-aastu-blue"
+                    placeholder={editingUser ? "Leave blank to keep current password" : "Enter password"}
+                  />
+                </div>
                 
                 <div className="flex justify-end space-x-3 mt-6">
                   <button
