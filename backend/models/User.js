@@ -50,7 +50,7 @@ const userSchema = new mongoose.Schema({
   college: {
     type: String,
     required: function() {
-      return this.role === 'student' || this.role === 'registrar_admin';
+      return this.role === 'student' || this.role === 'registrar_admin' || this.role === 'department_head';
     },
     enum: ['engineering', 'natural_sciences', 'social_sciences']
   },

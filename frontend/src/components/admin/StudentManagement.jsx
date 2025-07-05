@@ -51,9 +51,28 @@ const StudentManagement = () => {
     ]
   };
 
+  // Get departments for current user's college or all departments as fallback
+  const getAvailableDepartments = () => {
+    const userCollege = user?.college;
+    console.log('Getting departments for college:', userCollege);
+    
+    if (userCollege && departments[userCollege]) {
+      console.log('Found departments for college:', departments[userCollege]);
+      return departments[userCollege];
+    }
+    
+    // Fallback: return all departments if no college specified or college not found
+    const allDepartments = Object.values(departments).flat();
+    console.log('Using fallback - all departments:', allDepartments);
+    return allDepartments;
+  };
+
   useEffect(() => {
+    console.log('StudentManagement - Current user:', user);
+    console.log('StudentManagement - User college:', user?.college);
+    console.log('StudentManagement - Available departments:', departments[user?.college]);
     fetchStudents();
-  }, []);
+  }, [user]);
 
   const fetchStudents = async () => {
     try {
@@ -204,7 +223,7 @@ const StudentManagement = () => {
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-aastu-blue focus:border-aastu-blue w-full"
             >
               <option value="all">All Departments</option>
-              {user?.college && departments[user.college]?.map(dept => (
+              {getAvailableDepartments().map(dept => (
                 <option key={dept} value={dept}>{dept}</option>
               ))}
             </select>
@@ -348,7 +367,7 @@ const StudentManagement = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-aastu-blue focus:border-aastu-blue"
                   >
                     <option value="">Select Department</option>
-                    {user?.college && departments[user.college]?.map(dept => (
+                    {getAvailableDepartments().map(dept => (
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </select>

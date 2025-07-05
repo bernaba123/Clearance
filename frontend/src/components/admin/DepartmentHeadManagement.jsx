@@ -49,9 +49,28 @@ const DepartmentHeadManagement = () => {
     ]
   };
 
+  // Get departments for current user's college or all departments as fallback
+  const getAvailableDepartments = () => {
+    const userCollege = user?.college;
+    console.log('DeptHead - Getting departments for college:', userCollege);
+    
+    if (userCollege && departments[userCollege]) {
+      console.log('DeptHead - Found departments for college:', departments[userCollege]);
+      return departments[userCollege];
+    }
+    
+    // Fallback: return all departments if no college specified or college not found
+    const allDepartments = Object.values(departments).flat();
+    console.log('DeptHead - Using fallback - all departments:', allDepartments);
+    return allDepartments;
+  };
+
   useEffect(() => {
+    console.log('DepartmentHeadManagement - Current user:', user);
+    console.log('DepartmentHeadManagement - User college:', user?.college);
+    console.log('DepartmentHeadManagement - Available departments:', departments[user?.college]);
     fetchDepartmentHeads();
-  }, []);
+  }, [user]);
 
   const fetchDepartmentHeads = async () => {
     try {
@@ -196,7 +215,7 @@ const DepartmentHeadManagement = () => {
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-aastu-blue focus:border-aastu-blue w-full"
             >
               <option value="all">All Departments</option>
-              {user?.college && departments[user.college]?.map(dept => (
+              {getAvailableDepartments().map(dept => (
                 <option key={dept} value={dept}>{dept}</option>
               ))}
             </select>
@@ -326,7 +345,7 @@ const DepartmentHeadManagement = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-aastu-blue focus:border-aastu-blue"
                   >
                     <option value="">Select Department</option>
-                    {user?.college && departments[user.college]?.map(dept => (
+                    {getAvailableDepartments().map(dept => (
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </select>

@@ -1164,6 +1164,60 @@ router.delete('/registrar/department-heads/:id', authenticate, async (req, res) 
   }
 });
 
+// Test endpoint to create a registrar user (for development/testing only)
+router.post('/test/create-registrar', async (req, res) => {
+  try {
+    const { college } = req.body;
+    
+    if (!['engineering', 'natural_sciences', 'social_sciences'].includes(college)) {
+      return res.status(400).json({ message: 'Invalid college. Must be: engineering, natural_sciences, or social_sciences' });
+    }
+
+    // Check if registrar already exists for this college
+    const existingRegistrar = await User.findOne({ 
+      role: 'registrar_admin',
+      college: college 
+    });
+    
+    if (existingRegistrar) {
+      return res.status(400).json({ 
+        message: `Registrar already exists for ${college}`,
+        user: existingRegistrar.toJSON()
+      });
+    }
+
+    const collegeNames = {
+      engineering: 'Engineering',
+      natural_sciences: 'Natural Sciences', 
+      social_sciences: 'Social Sciences'
+    };
+
+    const registrarData = {
+      fullName: `${collegeNames[college]} Registrar`,
+      email: `registrar.${college}@aastu.edu.et`,
+      password: 'password123',
+      role: 'registrar_admin',
+      college: college,
+      isActive: true
+    };
+
+    const registrar = new User(registrarData);
+    await registrar.save();
+
+    res.status(201).json({
+      message: `Registrar created for ${college}`,
+      user: registrar.toJSON(),
+      loginCredentials: {
+        email: registrar.email,
+        password: 'password123'
+      }
+    });
+  } catch (error) {
+    console.error('Create test registrar error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Public system status endpoint (for students to check system status)
 router.get('/public/system-status', async (req, res) => {
   try {
