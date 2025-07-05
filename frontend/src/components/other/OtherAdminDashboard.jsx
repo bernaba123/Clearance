@@ -1,43 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Clock, CheckCircle, User } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext.jsx';
+import { CheckCircle, Clock, Eye, UserCheck, UserX, FileText, AlertCircle } from 'lucide-react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 
 const OtherAdminDashboard = () => {
-  const { user } = useAuth();
+  const { user, getRoleDisplayName } = useAuth();
   const [stats, setStats] = useState({
-    totalApplications: 0,
-    pendingApplications: 0,
-    approvedApplications: 0,
-    recentApplications: []
+    pendingApprovals: 0,
+    approvedToday: 0,
+    rejectedToday: 0,
+    totalProcessed: 0
   });
+  const [clearanceRequests, setClearanceRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
   useEffect(() => {
-    fetchStats();
+    fetchDashboardStats();
+    fetchClearanceRequests();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchDashboardStats = async () => {
     try {
       const response = await axios.get('/api/other-admin/dashboard-stats');
       setStats(response.data);
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error fetching dashboard stats:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getRoleDisplayName = (role) => {
-    const roleMap = {
-      'chief_librarian': 'Chief Librarian',
-      'dormitory_proctor': 'Dormitory Proctor',
-      'dining_officer': 'Dining Officer',
-      'student_affairs': 'Student Affairs/Service Dean',
+  const fetchClearanceRequests = async () => {
+    try {
+      const response = await axios.get('/api/other-admin/clearance-requests');
+      setClearanceRequests(response.data);
+    } catch (error) {
+      console.error('Error fetching clearance requests:', error);
+    }
+  };
+
+  const handleClearanceAction = async (requestId, action, remarks = '') => {
+    try {
+      await axios.post(`/api/other-admin/clearance/${requestId}/${action}`, { remarks });
+      toast.success(`Clearance ${action}d successfully`);
+      fetchClearanceRequests();
+      fetchDashboardStats();
+      setSelectedRequest(null);
+    } catch (error) {
+      toast.error(`Failed to ${action} clearance`);
+    }
+  };
+
+  const getOfficeType = () => {
+    const officeMap = {
+      'chief_librarian': 'Library',
+      'dormitory_proctor': 'Dormitory',
+      'dining_officer': 'Dining Services',
+      'student_affairs': 'Student Affairs',
       'student_discipline': 'Student Discipline',
-      'cost_sharing': 'Cost Sharing Officer'
+      'cost_sharing': 'Cost Sharing Office'
     };
-    return roleMap[role] || role.replace('_', ' ');
+    return officeMap[user?.role] || 'Office';
   };
 
   if (loading) {
@@ -52,14 +77,72 @@ const OtherAdminDashboard = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">
-          {getRoleDisplayName(user?.role)} - Manage clearance requirements
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">{getRoleDisplayName(user?.role)} Dashboard</h1>
+        <p className="text-gray-600">{getOfficeType()} - Clearance Management</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-8 w-8 text-aastu-gold" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Pending Approvals
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {stats.pendingApprovals}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Approved Today
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {stats.approvedToday}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <UserX className="h-8 w-8 text-red-600" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Rejected Today
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {stats.rejectedToday}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -69,50 +152,10 @@ const OtherAdminDashboard = () => {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total Applications
+                    Total Processed
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {stats.totalApplications}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Clock className="h-8 w-8 text-aastu-gold" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Pending Review
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {stats.pendingApplications}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-8 w-8 text-aastu-green" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Approved
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {stats.approvedApplications}
+                    {stats.totalProcessed}
                   </dd>
                 </dl>
               </div>
@@ -121,13 +164,32 @@ const OtherAdminDashboard = () => {
         </div>
       </div>
 
-      {/* Recent Applications */}
+      {/* Priority Notice */}
+      {stats.pendingApprovals > 0 && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-yellow-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                You have <strong>{stats.pendingApprovals}</strong> pending clearance request{stats.pendingApprovals > 1 ? 's' : ''} that require your approval.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clearance Requests */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Applications</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Clearance Requests</h2>
           
-          {stats.recentApplications.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No recent applications</p>
+          {clearanceRequests.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-2 text-gray-500">No pending clearance requests</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -140,40 +202,78 @@ const OtherAdminDashboard = () => {
                       Department
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Reason
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Applied
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {stats.recentApplications.map((application) => (
-                    <tr key={application._id} className="hover:bg-gray-50">
+                  {clearanceRequests.map((request) => (
+                    <tr key={request._id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {application.student?.fullName}
+                            {request.student?.fullName}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {application.student?.studentId}
+                            {request.student?.studentId}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {application.student?.department}
+                        {request.student?.department}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {request.reason || 'Graduation Clearance'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full capitalize ${
-                          application.myStatus === 'approved' ? 'bg-green-100 text-green-800' :
-                          application.myStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          request.officeStatus?.[user?.role] === 'approved' ? 'bg-green-100 text-green-800' :
+                          request.officeStatus?.[user?.role] === 'rejected' ? 'bg-red-100 text-red-800' :
                           'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {application.myStatus || 'pending'}
+                          {request.officeStatus?.[user?.role] || 'Pending'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(application.createdAt).toLocaleDateString()}
+                        {new Date(request.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => setSelectedRequest(request)}
+                            className="text-aastu-blue hover:text-blue-700"
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          {(!request.officeStatus?.[user?.role] || request.officeStatus[user?.role] === 'pending') && (
+                            <>
+                              <button
+                                onClick={() => handleClearanceAction(request._id, 'approve')}
+                                className="text-green-600 hover:text-green-700"
+                                title="Approve"
+                              >
+                                <UserCheck className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleClearanceAction(request._id, 'reject')}
+                                className="text-red-600 hover:text-red-700"
+                                title="Reject"
+                              >
+                                <UserX className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -184,99 +284,81 @@ const OtherAdminDashboard = () => {
         </div>
       </div>
 
-      {/* Role-specific Information */}
+      {/* Quick Info */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Your Responsibilities</h3>
-          
-          <div className="space-y-3">
-            {user?.role === 'chief_librarian' && (
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-900">Library Clearance</h4>
-                <p className="text-sm text-blue-700">
-                  Review and approve library clearances. Ensure all books are returned and fines are paid.
-                </p>
-              </div>
-            )}
-            
-            {user?.role === 'dormitory_proctor' && (
-              <div className="p-3 bg-green-50 rounded-lg">
-                <h4 className="font-medium text-green-900">Dormitory Clearance</h4>
-                <p className="text-sm text-green-700">
-                  Verify dormitory clearances. Check room conditions and settle any damages.
-                </p>
-              </div>
-            )}
-            
-            {user?.role === 'dining_officer' && (
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <h4 className="font-medium text-yellow-900">Dining Services Clearance</h4>
-                <p className="text-sm text-yellow-700">
-                  Process dining service clearances. Verify meal plan settlements and equipment returns.
-                </p>
-              </div>
-            )}
-            
-            {user?.role === 'student_affairs' && (
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <h4 className="font-medium text-purple-900">Student Affairs Clearance</h4>
-                <p className="text-sm text-purple-700">
-                  Handle student affairs clearances. Review student records and resolve any pending issues.
-                </p>
-              </div>
-            )}
-            
-            {user?.role === 'student_discipline' && (
-              <div className="p-3 bg-red-50 rounded-lg">
-                <h4 className="font-medium text-red-900">Disciplinary Clearance</h4>
-                <p className="text-sm text-red-700">
-                  Review disciplinary records. Ensure all disciplinary actions are resolved.
-                </p>
-              </div>
-            )}
-            
-            {user?.role === 'cost_sharing' && (
-              <div className="p-3 bg-indigo-50 rounded-lg">
-                <h4 className="font-medium text-indigo-900">Cost Sharing Clearance</h4>
-                <p className="text-sm text-indigo-700">
-                  Process cost sharing clearances. Verify payment settlements and financial obligations.
-                </p>
-              </div>
-            )}
+          <div className="prose text-sm text-gray-600">
+            <p>As a <strong>{getRoleDisplayName(user?.role)}</strong>, you are responsible for:</p>
+            <ul className="mt-2 space-y-1">
+              <li>• Reviewing student clearance requests promptly</li>
+              <li>• Approving requests when all requirements are met</li>
+              <li>• Rejecting requests with clear reasons when requirements are not fulfilled</li>
+              <li>• Maintaining accurate records of all decisions</li>
+            </ul>
           </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a 
-              href="/dashboard/profile" 
-              className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center">
-                <User className="h-6 w-6 text-aastu-blue mr-3" />
+      {/* Request Details Modal */}
+      {selectedRequest && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Clearance Request Details</h3>
+              <div className="space-y-3">
                 <div>
-                  <h4 className="font-medium">Manage Profile</h4>
-                  <p className="text-sm text-gray-600">Update your profile information</p>
+                  <label className="block text-sm font-medium text-gray-700">Student</label>
+                  <p className="text-sm text-gray-900">{selectedRequest.student?.fullName}</p>
+                  <p className="text-xs text-gray-500">{selectedRequest.student?.studentId}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Department</label>
+                  <p className="text-sm text-gray-900">{selectedRequest.student?.department}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Reason</label>
+                  <p className="text-sm text-gray-900">{selectedRequest.reason || 'Graduation Clearance'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Current Status</label>
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                    selectedRequest.officeStatus?.[user?.role] === 'approved' ? 'bg-green-100 text-green-800' :
+                    selectedRequest.officeStatus?.[user?.role] === 'rejected' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {selectedRequest.officeStatus?.[user?.role] || 'Pending'}
+                  </span>
                 </div>
               </div>
-            </a>
-            
-            <div className="block p-4 border rounded-lg bg-gray-50">
-              <div className="flex items-center">
-                <CheckCircle className="h-6 w-6 text-aastu-green mr-3" />
-                <div>
-                  <h4 className="font-medium">System Status</h4>
-                  <p className="text-sm text-gray-600">All systems operational</p>
-                </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setSelectedRequest(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                {(!selectedRequest.officeStatus?.[user?.role] || selectedRequest.officeStatus[user?.role] === 'pending') && (
+                  <>
+                    <button
+                      onClick={() => handleClearanceAction(selectedRequest._id, 'approve')}
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleClearanceAction(selectedRequest._id, 'reject')}
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700"
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

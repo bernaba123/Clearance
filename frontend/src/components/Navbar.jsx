@@ -52,9 +52,10 @@ const Navbar = () => {
                     logout();
                     navigate('/');
                   }}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition duration-200"
+                  className="bg-red-600 text-white p-2 rounded-md hover:bg-red-700 transition duration-200"
+                  title="Logout"
                 >
-                  Logout
+                  <LogOut className="h-5 w-5" />
                 </button>
               </div>
             ) : (
@@ -158,8 +159,9 @@ const Navbar = () => {
                     setIsOpen(false);
                     navigate('/');
                   }}
-                  className="block w-full text-left px-3 py-2 text-red-600"
+                  className="flex items-center w-full text-left px-3 py-2 text-red-600"
                 >
+                  <LogOut className="h-5 w-5 mr-2" />
                   Logout
                 </button>
               </>

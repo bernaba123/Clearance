@@ -11,7 +11,11 @@ import {
   User,
   CheckCircle,
   Clock,
-  BookOpen
+  BookOpen,
+  Power,
+  GraduationCap,
+  Building,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
@@ -21,35 +25,45 @@ const DashboardLayout = ({ children }) => {
   const location = useLocation();
 
   const getNavigationItems = () => {
+    const basePath = user?.role === 'student' ? '/student/dashboard' : '/admin/dashboard';
+    
     switch (user?.role) {
       case 'student':
         return [
-          { name: 'Dashboard', href: '/dashboard', icon: Home },
-          { name: 'Apply for Clearance', href: '/dashboard/apply', icon: FileText },
-          { name: 'View Status', href: '/dashboard/status', icon: Clock },
+          { name: 'Dashboard', href: `${basePath}`, icon: Home },
+          { name: 'Apply for Clearance', href: `${basePath}/apply`, icon: FileText },
+          { name: 'View Status', href: `${basePath}/status`, icon: Clock },
         ];
       
       case 'system_admin':
+        return [
+          { name: 'Dashboard', href: `${basePath}`, icon: Home },
+          { name: 'System Controls', href: `${basePath}`, icon: Power },
+          { name: 'Manage Registrars & Admins', href: `${basePath}/system-users`, icon: Users },
+          { name: 'Manage News', href: `${basePath}/news`, icon: Bell },
+        ];
+      
       case 'registrar_admin':
         return [
-          { name: 'Dashboard', href: '/dashboard', icon: Home },
-          { name: 'Manage Users', href: '/dashboard/users', icon: Users },
-          { name: 'Manage News', href: '/dashboard/news', icon: Bell },
-          { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+          { name: 'Dashboard', href: `${basePath}`, icon: Home },
+          { name: 'Monitor Clearances', href: `${basePath}`, icon: Eye },
+          { name: 'Manage Students', href: `${basePath}/college-students`, icon: GraduationCap },
+          { name: 'Manage Department Heads', href: `${basePath}/department-heads`, icon: Building },
         ];
       
       case 'department_head':
         return [
-          { name: 'Dashboard', href: '/dashboard', icon: Home },
-          { name: 'Review Applications', href: '/dashboard/applications', icon: CheckCircle },
-          { name: 'Students', href: '/dashboard/students', icon: Users },
+          { name: 'Dashboard', href: `${basePath}`, icon: Home },
+          { name: 'Review Applications', href: `${basePath}/applications`, icon: CheckCircle },
+          { name: 'Students', href: `${basePath}/students`, icon: Users },
         ];
       
       default:
+        // For other admin roles (chief_librarian, dormitory_proctor, etc.)
         return [
-          { name: 'Dashboard', href: '/dashboard', icon: Home },
-          { name: 'Manage Profile', href: '/dashboard/profile', icon: User },
-          { name: 'Resources', href: '/dashboard/resources', icon: BookOpen },
+          { name: 'Dashboard', href: `${basePath}`, icon: Home },
+          { name: 'Clearance Requests', href: `${basePath}`, icon: CheckCircle },
+          { name: 'Manage Profile', href: `${basePath}/profile`, icon: User },
         ];
     }
   };

@@ -9,7 +9,9 @@ import ApplyClearance from '../components/student/ApplyClearance.jsx';
 import ViewStatus from '../components/student/ViewStatus.jsx';
 
 // Admin Components
-import AdminDashboard from '../components/admin/AdminDashboard.jsx';
+import SystemAdminDashboard from '../components/admin/SystemAdminDashboard.jsx';
+import RegistrarDashboard from '../components/admin/RegistrarDashboard.jsx';
+import SystemUserManagement from '../components/admin/SystemUserManagement.jsx';
 import ManageUsers from '../components/admin/ManageUsers.jsx';
 import ManageNews from '../components/admin/ManageNews.jsx';
 
@@ -36,12 +38,20 @@ const Dashboard = () => {
         );
       
       case 'system_admin':
+        return (
+          <Routes>
+            <Route index element={<SystemAdminDashboard />} />
+            <Route path="system-users" element={<SystemUserManagement />} />
+            <Route path="news" element={<ManageNews />} />
+          </Routes>
+        );
+      
       case 'registrar_admin':
         return (
           <Routes>
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<ManageUsers />} />
-            <Route path="news" element={<ManageNews />} />
+            <Route index element={<RegistrarDashboard />} />
+            <Route path="college-students" element={<ManageUsers />} />
+            <Route path="department-heads" element={<ManageUsers />} />
           </Routes>
         );
       

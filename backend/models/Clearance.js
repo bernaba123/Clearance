@@ -55,7 +55,25 @@ const clearanceSchema = new mongoose.Schema({
   certificateGenerated: {
     type: Boolean,
     default: false
-  }
+  },
+  // New fields for enhanced dashboard functionality
+  officeStatus: {
+    type: Map,
+    of: String,
+    default: {}
+  },
+  officeRemarks: {
+    type: Map,
+    of: String,
+    default: {}
+  },
+  processedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  processedAt: Date,
+  remarks: String,
+  reason: String
 }, {
   timestamps: true
 });

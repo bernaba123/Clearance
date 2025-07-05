@@ -258,4 +258,291 @@ router.delete('/news/:id', authenticate, isAdmin, async (req, res) => {
   }
 });
 
+// System Admin specific endpoints
+
+// Get system status
+router.get('/system-status', authenticate, async (req, res) => {
+  try {
+    // Only system admins can access system status
+    if (req.user.role !== 'system_admin') {
+      return res.status(403).json({ message: 'Access denied. System admin required.' });
+    }
+
+    // For now, return default active status
+    // In a real implementation, this would be stored in a database
+    res.json({
+      clearanceSystemActive: true,
+      registrationActive: true
+    });
+  } catch (error) {
+    console.error('Get system status error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Toggle system status
+router.post('/toggle-system', authenticate, async (req, res) => {
+  try {
+    // Only system admins can toggle system status
+    if (req.user.role !== 'system_admin') {
+      return res.status(403).json({ message: 'Access denied. System admin required.' });
+    }
+
+    const { type } = req.body;
+    
+    // For now, return toggled status
+    // In a real implementation, this would update database values
+    const newStatus = {
+      clearanceSystemActive: type === 'clearance' ? !req.body.current : true,
+      registrationActive: type === 'registration' ? !req.body.current : true
+    };
+
+    res.json(newStatus);
+  } catch (error) {
+    console.error('Toggle system status error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get system users (for system admin - excludes students and department heads)
+router.get('/system-users', authenticate, async (req, res) => {
+  try {
+    // Only system admins can access system users
+    if (req.user.role !== 'system_admin') {
+      return res.status(403).json({ message: 'Access denied. System admin required.' });
+    }
+
+    const systemUsers = await User.find({
+      role: { 
+        $nin: ['student', 'department_head', 'system_admin'] // Exclude students, dept heads, and other system admins
+      }
+    })
+    .select('-password')
+    .sort({ createdAt: -1 });
+
+    res.json(systemUsers);
+  } catch (error) {
+    console.error('Get system users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Registrar Admin specific endpoints
+
+// Get registrar dashboard stats
+router.get('/registrar/dashboard-stats', authenticate, async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const college = req.user.college;
+    
+    const [totalStudents, totalDepartmentHeads, pendingClearances, completedClearances, recentClearances] = await Promise.all([
+      User.countDocuments({ role: 'student', college }),
+      User.countDocuments({ role: 'department_head', college }),
+      Clearance.countDocuments({ 
+        student: { $in: await User.find({ college, role: 'student' }).select('_id') },
+        status: 'pending'
+      }),
+      Clearance.countDocuments({ 
+        student: { $in: await User.find({ college, role: 'student' }).select('_id') },
+        status: 'completed'
+      }),
+      Clearance.find({ 
+        student: { $in: await User.find({ college, role: 'student' }).select('_id') }
+      })
+        .populate('student', 'fullName studentId department')
+        .sort({ createdAt: -1 })
+        .limit(5)
+    ]);
+
+    res.json({
+      totalStudents,
+      totalDepartmentHeads,
+      pendingClearances,
+      completedClearances,
+      recentClearances
+    });
+  } catch (error) {
+    console.error('Get registrar dashboard stats error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get college clearances
+router.get('/registrar/clearances', authenticate, async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const college = req.user.college;
+    const collegeStudents = await User.find({ college, role: 'student' }).select('_id');
+    
+    const clearances = await Clearance.find({
+      student: { $in: collegeStudents }
+    })
+    .populate('student', 'fullName studentId department college')
+    .sort({ createdAt: -1 });
+
+    res.json(clearances);
+  } catch (error) {
+    console.error('Get college clearances error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Approve/reject clearance by registrar
+router.post('/registrar/clearance/:id/:action', authenticate, async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const { id, action } = req.params;
+    const { remarks } = req.body;
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ message: 'Invalid action' });
+    }
+
+    const clearance = await Clearance.findById(id).populate('student');
+    if (!clearance) {
+      return res.status(404).json({ message: 'Clearance not found' });
+    }
+
+    // Check if the student belongs to the registrar's college
+    if (clearance.student.college !== req.user.college) {
+      return res.status(403).json({ message: 'You can only manage clearances for your college' });
+    }
+
+    // Update clearance status
+    clearance.status = action === 'approve' ? 'approved' : 'rejected';
+    if (remarks) {
+      clearance.remarks = remarks;
+    }
+    clearance.processedBy = req.user._id;
+    clearance.processedAt = new Date();
+
+    await clearance.save();
+
+    res.json({ message: `Clearance ${action}d successfully` });
+  } catch (error) {
+    console.error(`${req.params.action} clearance error:`, error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Other Admin specific endpoints
+
+// Get other admin dashboard stats
+router.get('/other-admin/dashboard-stats', authenticate, async (req, res) => {
+  try {
+    // Only other admin roles can access this
+    const otherAdminRoles = ['chief_librarian', 'dormitory_proctor', 'dining_officer', 'student_affairs', 'student_discipline', 'cost_sharing'];
+    if (!otherAdminRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
+    const userRole = req.user.role;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [pendingApprovals, approvedToday, rejectedToday, totalProcessed] = await Promise.all([
+      Clearance.countDocuments({ 
+        [`officeStatus.${userRole}`]: { $in: [null, 'pending'] }
+      }),
+      Clearance.countDocuments({ 
+        [`officeStatus.${userRole}`]: 'approved',
+        processedAt: { $gte: today }
+      }),
+      Clearance.countDocuments({ 
+        [`officeStatus.${userRole}`]: 'rejected',
+        processedAt: { $gte: today }
+      }),
+      Clearance.countDocuments({ 
+        [`officeStatus.${userRole}`]: { $in: ['approved', 'rejected'] }
+      })
+    ]);
+
+    res.json({
+      pendingApprovals,
+      approvedToday,
+      rejectedToday,
+      totalProcessed
+    });
+  } catch (error) {
+    console.error('Get other admin dashboard stats error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get clearance requests for other admin
+router.get('/other-admin/clearance-requests', authenticate, async (req, res) => {
+  try {
+    // Only other admin roles can access this
+    const otherAdminRoles = ['chief_librarian', 'dormitory_proctor', 'dining_officer', 'student_affairs', 'student_discipline', 'cost_sharing'];
+    if (!otherAdminRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
+    const clearanceRequests = await Clearance.find()
+      .populate('student', 'fullName studentId department college')
+      .sort({ createdAt: -1 });
+
+    res.json(clearanceRequests);
+  } catch (error) {
+    console.error('Get clearance requests error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Approve/reject clearance by other admin
+router.post('/other-admin/clearance/:id/:action', authenticate, async (req, res) => {
+  try {
+    // Only other admin roles can access this
+    const otherAdminRoles = ['chief_librarian', 'dormitory_proctor', 'dining_officer', 'student_affairs', 'student_discipline', 'cost_sharing'];
+    if (!otherAdminRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
+    const { id, action } = req.params;
+    const { remarks } = req.body;
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ message: 'Invalid action' });
+    }
+
+    const clearance = await Clearance.findById(id);
+    if (!clearance) {
+      return res.status(404).json({ message: 'Clearance not found' });
+    }
+
+    // Update office status for this admin
+    if (!clearance.officeStatus) {
+      clearance.officeStatus = {};
+    }
+    clearance.officeStatus[req.user.role] = action === 'approve' ? 'approved' : 'rejected';
+    
+    if (remarks) {
+      if (!clearance.officeRemarks) {
+        clearance.officeRemarks = {};
+      }
+      clearance.officeRemarks[req.user.role] = remarks;
+    }
+
+    clearance.processedAt = new Date();
+    await clearance.save();
+
+    res.json({ message: `Clearance ${action}d successfully` });
+  } catch (error) {
+    console.error(`${req.params.action} clearance error:`, error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 export default router;
