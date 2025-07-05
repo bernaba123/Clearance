@@ -710,6 +710,460 @@ router.post('/other-admin/clearance/:id/:action', authenticate, async (req, res)
   }
 });
 
+// Registrar Student Management Endpoints
+
+// Get students for registrar (college-specific)
+router.get('/registrar/students', authenticate, async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const college = req.user.college;
+    if (!college) {
+      return res.status(400).json({ message: 'Registrar admin must have a college assigned' });
+    }
+
+    const students = await User.find({
+      role: 'student',
+      college: college
+    })
+    .select('-password')
+    .sort({ createdAt: -1 });
+
+    res.json(students);
+  } catch (error) {
+    console.error('Get registrar students error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create student for registrar
+router.post('/registrar/students', authenticate, [
+  body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
+  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('studentId').trim().isLength({ min: 1 }).withMessage('Student ID is required'),
+  body('department').trim().isLength({ min: 1 }).withMessage('Department is required'),
+  body('yearLevel').isIn(['1', '2', '3', '4', '5']).withMessage('Invalid year level')
+], async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.error('Validation errors:', errors.array());
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const college = req.user.college;
+    if (!college) {
+      return res.status(400).json({ message: 'Registrar admin must have a college assigned' });
+    }
+
+    const studentData = {
+      ...req.body,
+      role: 'student',
+      college: college
+    };
+
+    console.log('Creating student with data:', { ...studentData, password: '[HIDDEN]' });
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ 
+      $or: [{ email: studentData.email }, { studentId: studentData.studentId }] 
+    });
+    if (existingUser) {
+      return res.status(400).json({ 
+        message: existingUser.email === studentData.email ? 'Email already exists' : 'Student ID already exists'
+      });
+    }
+
+    const student = new User(studentData);
+    await student.save();
+
+    res.status(201).json({
+      message: 'Student created successfully',
+      user: student.toJSON()
+    });
+  } catch (error) {
+    console.error('Create student error:', error);
+    console.error('Error details:', error.message);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+    res.status(500).json({ 
+      message: 'Server error during student creation',
+      error: error.message 
+    });
+  }
+});
+
+// Update student for registrar
+router.put('/registrar/students/:id', authenticate, [
+  body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
+  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('studentId').trim().isLength({ min: 1 }).withMessage('Student ID is required'),
+  body('department').trim().isLength({ min: 1 }).withMessage('Department is required'),
+  body('yearLevel').isIn(['1', '2', '3', '4', '5']).withMessage('Invalid year level')
+], async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const studentId = req.params.id;
+    const updateData = { ...req.body };
+    console.log('Updating student with data:', { ...updateData, password: updateData.password ? '[HIDDEN]' : 'Not provided' });
+
+    // Remove password from update if it's empty
+    if (!updateData.password || updateData.password.trim() === '') {
+      delete updateData.password;
+    }
+
+    // Ensure college matches registrar's college
+    updateData.college = req.user.college;
+
+    // Check if student exists and belongs to registrar's college
+    const existingStudent = await User.findOne({ 
+      _id: studentId, 
+      role: 'student', 
+      college: req.user.college 
+    });
+    if (!existingStudent) {
+      return res.status(404).json({ message: 'Student not found or not in your college' });
+    }
+
+    // Check if email or studentId is being changed and if it already exists
+    const duplicateUser = await User.findOne({ 
+      $and: [
+        { _id: { $ne: studentId } },
+        {
+          $or: [
+            { email: updateData.email },
+            { studentId: updateData.studentId }
+          ]
+        }
+      ]
+    });
+    if (duplicateUser) {
+      return res.status(400).json({ 
+        message: duplicateUser.email === updateData.email ? 'Email already exists' : 'Student ID already exists'
+      });
+    }
+
+    const student = await User.findByIdAndUpdate(
+      studentId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({
+      message: 'Student updated successfully',
+      user: student.toJSON()
+    });
+  } catch (error) {
+    console.error('Update student error:', error);
+    console.error('Error details:', error.message);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+    res.status(500).json({ 
+      message: 'Server error during student update',
+      error: error.message 
+    });
+  }
+});
+
+// Delete student for registrar
+router.delete('/registrar/students/:id', authenticate, async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const studentId = req.params.id;
+
+    // Check if student exists and belongs to registrar's college
+    const student = await User.findOne({ 
+      _id: studentId, 
+      role: 'student', 
+      college: req.user.college 
+    });
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found or not in your college' });
+    }
+
+    await User.findByIdAndDelete(studentId);
+
+    res.json({ message: 'Student deleted successfully' });
+  } catch (error) {
+    console.error('Delete student error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Registrar Department Head Management Endpoints
+
+// Get department heads for registrar (college-specific)
+router.get('/registrar/department-heads', authenticate, async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const college = req.user.college;
+    if (!college) {
+      return res.status(400).json({ message: 'Registrar admin must have a college assigned' });
+    }
+
+    const departmentHeads = await User.find({
+      role: 'department_head',
+      college: college
+    })
+    .select('-password')
+    .sort({ createdAt: -1 });
+
+    res.json(departmentHeads);
+  } catch (error) {
+    console.error('Get registrar department heads error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create department head for registrar
+router.post('/registrar/department-heads', authenticate, [
+  body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
+  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('department').trim().isLength({ min: 1 }).withMessage('Department is required')
+], async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.error('Validation errors:', errors.array());
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const college = req.user.college;
+    if (!college) {
+      return res.status(400).json({ message: 'Registrar admin must have a college assigned' });
+    }
+
+    const headData = {
+      ...req.body,
+      role: 'department_head',
+      college: college
+    };
+
+    console.log('Creating department head with data:', { ...headData, password: '[HIDDEN]' });
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: headData.email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    // Check if department head already exists for this department
+    const existingHead = await User.findOne({ 
+      role: 'department_head',
+      department: headData.department,
+      college: college
+    });
+    if (existingHead) {
+      return res.status(400).json({ 
+        message: `Department head already exists for ${headData.department}` 
+      });
+    }
+
+    const departmentHead = new User(headData);
+    await departmentHead.save();
+
+    res.status(201).json({
+      message: 'Department head created successfully',
+      user: departmentHead.toJSON()
+    });
+  } catch (error) {
+    console.error('Create department head error:', error);
+    console.error('Error details:', error.message);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+    res.status(500).json({ 
+      message: 'Server error during department head creation',
+      error: error.message 
+    });
+  }
+});
+
+// Update department head for registrar
+router.put('/registrar/department-heads/:id', authenticate, [
+  body('fullName').trim().isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
+  body('email').isEmail().withMessage('Please provide a valid email'),
+  body('department').trim().isLength({ min: 1 }).withMessage('Department is required')
+], async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const headId = req.params.id;
+    const updateData = { ...req.body };
+    console.log('Updating department head with data:', { ...updateData, password: updateData.password ? '[HIDDEN]' : 'Not provided' });
+
+    // Remove password from update if it's empty
+    if (!updateData.password || updateData.password.trim() === '') {
+      delete updateData.password;
+    }
+
+    // Ensure college matches registrar's college
+    updateData.college = req.user.college;
+
+    // Check if department head exists and belongs to registrar's college
+    const existingHead = await User.findOne({ 
+      _id: headId, 
+      role: 'department_head', 
+      college: req.user.college 
+    });
+    if (!existingHead) {
+      return res.status(404).json({ message: 'Department head not found or not in your college' });
+    }
+
+    // Check if email is being changed and if it already exists
+    const duplicateUser = await User.findOne({ 
+      email: updateData.email,
+      _id: { $ne: headId }
+    });
+    if (duplicateUser) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    // Check if department head already exists for the new department (if department is changing)
+    if (updateData.department !== existingHead.department) {
+      const existingDeptHead = await User.findOne({ 
+        role: 'department_head',
+        department: updateData.department,
+        college: req.user.college,
+        _id: { $ne: headId }
+      });
+      if (existingDeptHead) {
+        return res.status(400).json({ 
+          message: `Department head already exists for ${updateData.department}` 
+        });
+      }
+    }
+
+    const departmentHead = await User.findByIdAndUpdate(
+      headId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({
+      message: 'Department head updated successfully',
+      user: departmentHead.toJSON()
+    });
+  } catch (error) {
+    console.error('Update department head error:', error);
+    console.error('Error details:', error.message);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+    res.status(500).json({ 
+      message: 'Server error during department head update',
+      error: error.message 
+    });
+  }
+});
+
+// Delete department head for registrar
+router.delete('/registrar/department-heads/:id', authenticate, async (req, res) => {
+  try {
+    // Only registrar admins can access this
+    if (req.user.role !== 'registrar_admin') {
+      return res.status(403).json({ message: 'Access denied. Registrar admin required.' });
+    }
+
+    const headId = req.params.id;
+
+    // Check if department head exists and belongs to registrar's college
+    const departmentHead = await User.findOne({ 
+      _id: headId, 
+      role: 'department_head', 
+      college: req.user.college 
+    });
+    if (!departmentHead) {
+      return res.status(404).json({ message: 'Department head not found or not in your college' });
+    }
+
+    await User.findByIdAndDelete(headId);
+
+    res.json({ message: 'Department head deleted successfully' });
+  } catch (error) {
+    console.error('Delete department head error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Public system status endpoint (for students to check system status)
 router.get('/public/system-status', async (req, res) => {
   try {

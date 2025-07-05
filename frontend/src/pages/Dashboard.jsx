@@ -12,6 +12,8 @@ import ViewStatus from '../components/student/ViewStatus.jsx';
 import SystemAdminDashboard from '../components/admin/SystemAdminDashboard.jsx';
 import RegistrarDashboard from '../components/admin/RegistrarDashboard.jsx';
 import SystemUserManagement from '../components/admin/SystemUserManagement.jsx';
+import StudentManagement from '../components/admin/StudentManagement.jsx';
+import DepartmentHeadManagement from '../components/admin/DepartmentHeadManagement.jsx';
 import ManageUsers from '../components/admin/ManageUsers.jsx';
 import ManageNews from '../components/admin/ManageNews.jsx';
 
@@ -50,8 +52,8 @@ const Dashboard = () => {
         return (
           <Routes>
             <Route index element={<RegistrarDashboard />} />
-            <Route path="college-students" element={<ManageUsers />} />
-            <Route path="department-heads" element={<ManageUsers />} />
+            <Route path="college-students" element={<StudentManagement />} />
+            <Route path="department-heads" element={<DepartmentHeadManagement />} />
           </Routes>
         );
       
